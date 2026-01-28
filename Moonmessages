@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<title>Moon Messenger</title>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/font-face.css" rel="stylesheet" type="text/css" />
+<style>
+  body {
+    margin:0;
+    font-family: 'Vazir', sans-serif;
+    background: radial-gradient(#001529, #000814);
+    overflow:hidden;
+    color:#fff;
+  }
+  /* بک‌گراند ذرات نورانی */
+  .stars {
+    position:absolute;
+    width:100%;
+    height:100%;
+    background:transparent;
+    z-index:0;
+  }
+  .star {
+    position:absolute;
+    width:2px; height:2px;
+    background:white;
+    border-radius:50%;
+    animation: twinkle 3s infinite;
+  }
+  @keyframes twinkle {
+    0%,100% {opacity:0.2;}
+    50% {opacity:1;}
+  }
+  /* فرم ورود */
+  #login {
+    position:absolute;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    background: rgba(0,0,0,0.6);
+    padding:30px;
+    border-radius:15px;
+    box-shadow:0 0 20px #00f;
+    text-align:center;
+    z-index:1;
+  }
+  #login input {
+    display:block;
+    margin:10px auto;
+    padding:10px;
+    border-radius:10px;
+    border:none;
+    width:200px;
+    font-size:16px;
+    text-align:center;
+  }
+  #login button {
+    padding:10px 20px;
+    border:none;
+    border-radius:15px;
+    background: linear-gradient(45deg,#00f,#0ff);
+    color:#fff;
+    font-weight:bold;
+    cursor:pointer;
+    box-shadow:0 5px 15px rgba(0,255,255,0.5);
+    transition:0.3s;
+  }
+  #login button:hover {
+    transform:translateY(-3px);
+    box-shadow:0 10px 20px rgba(0,255,255,0.7);
+  }
+
+  /* صفحه چت */
+  #chat {
+    display:none;
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    display:flex;
+    flex-direction:column;
+    z-index:1;
+  }
+  #messages {
+    flex:1;
+    padding:20px;
+    overflow-y:auto;
+  }
+  .msg {
+    margin:5px 0;
+    padding:10px;
+    border-radius:10px;
+    max-width:60%;
+    word-wrap:break-word;
+  }
+  .user {
+    background:#00f;
+    align-self:flex-end;
+  }
+  .friend {
+    background:#0ff;
+    align-self:flex-start;
+  }
+  #input-area {
+    display:flex;
+    padding:10px;
+    background: rgba(0,0,0,0.6);
+  }
+  #input-area input {
+    flex:1;
+    padding:10px;
+    border-radius:10px;
+    border:none;
+    font-size:16px;
+  }
+  #input-area button {
+    padding:10px 20px;
+    margin-left:10px;
+    border:none;
+    border-radius:15px;
+    background: linear-gradient(45deg,#00f,#0ff);
+    color:#fff;
+    font-weight:bold;
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+
+<!-- صفحه ورود -->
+<div id="login">
+  <h2>به Moon Messenger خوش آمدید</h2>
+  <input type="text" id="name" placeholder="نام و نام خانوادگی">
+  <input type="text" id="code" placeholder="کد ورود">
+  <button onclick="login()">ورود</button>
+</div>
+
+<!-- صفحه چت -->
+<div id="chat">
+  <div id="messages"></div>
+  <div id="input-area">
+    <input type="text" id="message-input" placeholder="پیام خود را بنویسید">
+    <button onclick="sendMessage()">ارسال</button>
+  </div>
+</div>
+
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+<script>
+const supabaseUrl = 'https://qhbwyvohchhdlrpdmdpq.supabase.co';
+const supabaseKey = 'sb_publishable_BMWofI5IbrvIrqG2k91sEg_Nt1sV3LL';
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+let userName = '';
+const messagesDiv = document.getElementById('messages');
+
+function login() {
+  const nameInput = document.getElementById('name').value.trim();
+  const codeInput = document.getElementById('code').value.trim();
+  if(nameInput && codeInput === '9865'){
+    userName = nameInput;
+    document.getElementById('login').style.display='none';
+    document.getElementById('chat').style.display='flex';
+    subscribeMessages();
+  } else {
+    alert('نام و کد ورود صحیح نیست!');
+  }
+}
+
+// ارسال پیام
+async function sendMessage() {
+  const input = document.getElementById('message-input');
+  const text = input.value.trim();
+  if(!text) return;
+  await supabase
+    .from('messages')
+    .insert([{ sender:userName, content:text }]);
+  input.value='';
+}
+
+// دریافت پیام لحظه‌ای
+function subscribeMessages(){
+  supabase
+    .channel('public:messages')
+    .on('postgres_changes', { event: '*', schema:'public', table:'messages' }, payload => {
+      const msg = payload.new;
+      displayMessage(msg.sender,msg.content);
+    })
+    .subscribe();
+}
+
+// نمایش پیام در صفحه
+function displayMessage(sender, content){
+  const div = document.createElement('div');
+  div.className = 'msg '+(sender===userName?'user':'friend');
+  div.innerText = sender+': '+content;
+  messagesDiv.appendChild(div);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+// ذرات نورانی بک‌گراند
+const starsDiv = document.getElementById('stars');
+for(let i=0;i<100;i++){
+  const star = document.createElement('div');
+  star.className='star';
+  star.style.top = Math.random()*100+'%';
+  star.style.left = Math.random()*100+'%';
+  star.style.width = star.style.height = Math.random()*2+1+'px';
+  starsDiv.appendChild(star);
+}
+</script>
+</body>
+</html>
