@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<title>Simple ChatBot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:#1e1e2f;
+  color:white;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+}
+#chat{
+  flex:1;
+  padding:10px;
+  overflow-y:auto;
+  background:#2c2c44;
+}
+.message{
+  max-width:80%;
+  padding:8px 12px;
+  border-radius:12px;
+  margin:6px 0;
+  word-wrap:break-word;
+}
+.user{ background:#4c6ef5; align-self:flex-end; }
+.bot{ background:#f59f00; align-self:flex-start; }
+#inputArea{
+  display:flex;
+  padding:10px;
+  background:#2c2c44;
+}
+#inputArea input{
+  flex:1;
+  padding:8px;
+  border-radius:8px;
+  border:none;
+  outline:none;
+}
+#inputArea button{
+  padding:8px 12px;
+  margin-left:6px;
+  border:none;
+  border-radius:8px;
+  background:#4c6ef5;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<div id="chat"></div>
+
+<div id="inputArea">
+  <input id="input" type="text" placeholder="پیام خود را تایپ کنید...">
+  <button onclick="sendMessage()">Send</button>
+</div>
+
+<script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+
+// API
+const API_KEY = "sk-MeFUOowj5yILENmQD3kGkaowLeRCiwm7cbnLQSfbZjb9RT5d";
+const BASE_URL = "https://api.gapgpt.app/v1";
+
+function addMessage(text, sender){
+  const div = document.createElement("div");
+  div.className = "message " + sender;
+  div.innerText = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendMessage(){
+  const message = input.value.trim();
+  if(!message) return;
+  addMessage(message,"user");
+  input.value="";
+
+  addMessage("در حال پاسخ...","bot");
+
+  try{
+    const res = await fetch(BASE_URL+"/chat/completions",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer "+API_KEY
+      },
+      body: JSON.stringify({
+        model:"gapgpt",
+        messages:[{role:"user", content:message}]
+      })
+    });
+    const data = await res.json();
+    const botMessage = data.choices && data.choices[0].message.content || "خطا در پاسخ";
+    chat.lastChild.innerText = botMessage;
+    chat.scrollTop = chat.scrollHeight;
+  } catch(err){
+    console.error(err);
+    chat.lastChild.innerText = "خطا در اتصال به API";
+  }
+}
+
+// Enter key
+input.addEventListener("keydown", function(e){
+  if(e.key === "Enter") sendMessage();
+});
+</script>
+
+</body>
+</html>
